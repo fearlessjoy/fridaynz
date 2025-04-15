@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Task, TeamMember, TaskPriority, SubTask, Comment } from '@/lib/types';
 import {
-  Dialog,
+  StableDialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter
-} from '@/components/ui/dialog';
+} from '@/components/ui/stable-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, User, MessageCircle, ThumbsUp, CheckCircle, XCircle, Trash2, ListChecks } from 'lucide-react';
@@ -166,14 +166,33 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const handleCommentAdded = (taskId: string, commentText: string) => {
     console.log('Comment added in TaskDetailDialog', taskId, commentText);
     
+    // Update local state immediately for better UX
+    if (localTask) {
+      const newComment: Comment = {
+        id: uuidv4(),
+        userId: currentUserId || '',
+        userName: teamMembers.find(m => m.id === currentUserId)?.name || 'You',
+        content: commentText,
+        timestamp: new Date().toISOString(),
+        taskId: taskId
+      };
+      
+      const updatedTask: Task = {
+        ...localTask,
+        comments: [...(localTask.comments || []), newComment],
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Update local state
+      setLocalTask(updatedTask);
+    }
+    
     // The actual update is handled at the TaskBoard level
     // This function is passed to ensure the parent component is notified
     if (onCommentAdded) {
       onCommentAdded(taskId, commentText);
       
-      // Note: We're not updating local state here because the parent component
-      // will handle the Firestore update, and the component will re-render
-      // when the parent's state changes. This prevents duplicate comments.
+      // Note: The parent component will handle the Firestore update
     }
   };
 
@@ -206,7 +225,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <StableDialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[80vh] flex flex-col overflow-hidden" aria-describedby="task-detail-description">
           <DialogHeader>
             <div className="flex items-start justify-between">
@@ -246,21 +265,19 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5" />
-                  Comments ({localTask?.comments?.length || 0})
+                  Comments {localTask?.comments?.length ? `(${localTask.comments.length})` : ''}
                 </div>
               </TabsTrigger>
-              {localTask?.needsApproval ? (
+              {hasApprovalTab && (
                 <TabsTrigger 
-                  value="approvals" 
+                  value="approvals"
                   className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-3 transition-all"
                 >
                   <div className="flex items-center gap-2">
                     <ThumbsUp className="h-5 w-5" />
-                    Approvals ({localTask.approvals?.length || 0})
+                    Approvals {localTask?.approvals?.length ? `(${localTask.approvals.length})` : ''}
                   </div>
                 </TabsTrigger>
-              ) : (
-                <div></div> 
               )}
             </TabsList>
 
@@ -382,6 +399,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   teamMembers={teamMembers}
                   userRole={userRole}
                   onDeleteComment={handleDeleteComment}
+                  directUpdate={false}
                 />
               </div>
             </TabsContent>
@@ -443,7 +461,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             )}
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </StableDialog>
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

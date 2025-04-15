@@ -18,6 +18,7 @@ import { Message } from '@/lib/types';
 import { sendTaskUpdateEmail } from '@/lib/notificationService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type TaskBoardProps = {
   tasks: Task[];
@@ -351,7 +352,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
       });
 
       // Update local state to show the comment immediately
-      if (onTaskUpdate) {
+      if (onTaskUpdate && task) {
         const updatedTask: Task = {
           ...task,
           comments: [...(task.comments || []), newComment],
@@ -360,6 +361,11 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
         
         // Update the tasks array with the new comment
         onTaskUpdate(updatedTask);
+        
+        // If this task is the currently selected task, update it
+        if (selectedTask && selectedTask.id === taskId) {
+          setSelectedTask(updatedTask);
+        }
       }
 
       toast({
@@ -745,7 +751,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
       <div className="grid grid-cols-1 gap-4">
         {filteredTasks.map((task) => (
           <TaskCard
-            key={task.id}
+            key={`task-${task.id}-${task.comments?.length || 0}`}
             task={task}
             assignee={getAssigneeForTask(task)}
             onApprovalClick={() => handleApprovalClick(task)}

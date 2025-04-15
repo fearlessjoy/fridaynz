@@ -40,6 +40,7 @@ interface TaskCommentsProps {
   teamMembers: TeamMember[];
   userRole?: string;
   onDeleteComment?: (taskId: string, commentId: string) => Promise<void>;
+  directUpdate?: boolean;
 }
 
 interface MentionData {
@@ -49,7 +50,7 @@ interface MentionData {
   index: number;
 }
 
-const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onCommentAdded, teamMembers, userRole, onDeleteComment }) => {
+const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onCommentAdded, teamMembers, userRole, onDeleteComment, directUpdate = false }) => {
   const [newComment, setNewComment] = useState('');
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
@@ -94,19 +95,12 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
 
     try {
       setIsSubmitting(true);
-      const db = getFirestore();
-      const taskRef = doc(db, 'tasks', taskId);
       
-      const taskDoc = await getDoc(taskRef);
-      if (!taskDoc.exists()) {
-        throw new Error('Task document does not exist');
-      }
+      const commentContent = newComment.trim();
       
-      const taskData = taskDoc.data();
-
       // Extract mentions from the comment
       const mentionRegex = /@([a-zA-Z\s]+)/g;
-      const mentions = Array.from(newComment.matchAll(mentionRegex))
+      const mentions = Array.from(commentContent.matchAll(mentionRegex))
         .map(match => match[1].trim());
       
       // Find mentioned user IDs
@@ -119,7 +113,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
         id: uuidv4(),
         userId: currentUser.uid,
         userName: userData.name || 'Anonymous',
-        content: newComment.trim(),
+        content: commentContent,
         timestamp: new Date().toISOString(),
         taskId: taskId,
         mentions: mentionedUsers
@@ -128,21 +122,48 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
       // Clear the input field immediately for better UX
       setNewComment('');
       
-      // Update Firestore with explicit update instead of arrayUnion
-      await updateDoc(taskRef, {
-        comments: [...(taskData.comments || []), comment],
-        updatedAt: serverTimestamp()
-      });
+      // Update local UI with the new comment for immediate feedback
+      // We'll add it to the existing comments without waiting for the parent component
+      // This prevents UI lag and ensures users see their comment right away
+      const updatedComments = [...comments, comment];
       
-      // Notify parent component about the comment addition
-      // This allows the parent to update its state and UI
-      console.log('Notifying parent of new comment');
-      onCommentAdded(taskId, comment.content);
-      
-      toast({
-        title: "Comment Added",
-        description: "Your comment has been added to the task.",
-      });
+      if (directUpdate) {
+        // Option 1: Update Firestore directly
+        const db = getFirestore();
+        const taskRef = doc(db, 'tasks', taskId);
+        
+        const taskDoc = await getDoc(taskRef);
+        if (!taskDoc.exists()) {
+          throw new Error('Task document does not exist');
+        }
+        
+        const taskData = taskDoc.data();
+        
+        await updateDoc(taskRef, {
+          comments: [...(taskData.comments || []), comment],
+          updatedAt: serverTimestamp()
+        });
+        
+        toast({
+          title: "Comment Added",
+          description: "Your comment has been added to the task.",
+        });
+      } else {
+        // Option 2: Let parent handle the update, but in a way that won't cause UI issues
+        console.log('Notifying parent of new comment');
+        
+        // Use setTimeout to ensure we're not causing any state update conflicts
+        setTimeout(() => {
+          // Notify parent component of the new comment
+          onCommentAdded(taskId, comment.content);
+          
+          // Show a toast notification for the user
+          toast({
+            title: "Comment Added",
+            description: "Your comment has been added to the task.",
+          });
+        }, 0);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({

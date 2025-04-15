@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StableDialogComments } from "@/components/ui/stable-dialog-comments";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -132,11 +133,13 @@ const TaskCard = ({
 
   const handleCommentsClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card selection when clicking comments
+    e.preventDefault(); // Prevent default browser behavior
     setIsCommentsDialogOpen(true);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card selection when clicking delete
+    e.preventDefault(); // Prevent default browser behavior
     setIsDeleteDialogOpen(true);
   };
   
@@ -323,67 +326,44 @@ const TaskCard = ({
         </CardFooter>
       </Card>
 
-      <Dialog open={isCommentsDialogOpen} onOpenChange={setIsCommentsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] h-[80vh] flex flex-col overflow-hidden" aria-describedby="comments-dialog-description">
-          <DialogHeader>
-            <DialogTitle>Comments - {task.title}</DialogTitle>
-            <DialogDescription>
-              Add or view comments for this task
-            </DialogDescription>
-          </DialogHeader>
-          <div id="comments-dialog-description" className="sr-only">
-            View and manage comments for task: {task.title}
-          </div>
-          <div className="mt-4 flex-1 overflow-hidden flex">
-            <TaskComments
-              taskId={task.id}
-              comments={task.comments || []}
-              onCommentAdded={(taskId, commentText) => {
-                // Only call onCommentAdded when there's actual comment text
-                if (commentText && commentText.trim()) {
-                  onCommentAdded?.(taskId, commentText);
-                }
-              }}
-              teamMembers={teamMembers}
-              userRole={userRole}
-              onDeleteComment={(taskId, commentId) => {
-                return new Promise(async (resolve) => {
-                  try {
-                    // Actually delete the comment using the parent component's function
-                    // This is the critical change - we need to actually perform the deletion
-                    if (onDeleteTask) {
-                      // First close the dialog to avoid UI glitches
-                      setIsCommentsDialogOpen(false);
-                      
-                      // Wait a moment for the UI to update
-                      await new Promise(r => setTimeout(r, 50));
-                      
-                      // Directly call the method that knows how to delete tasks/comments
-                      // Since we can't access handleDeleteComment, we'll use a workaround
-                      // by calling the parent component's comment handler with a special value
-                      if (onCommentAdded) {
-                        // Pass a special marker to the parent component
-                        onCommentAdded(taskId, `__DELETE_COMMENT__${commentId}`);
-                      }
-                      
-                      // Wait for the deletion to complete
-                      await new Promise(r => setTimeout(r, 200));
-                      
-                      // Reopen the dialog
-                      setIsCommentsDialogOpen(true);
-                    }
-                    
-                    resolve();
-                  } catch (error) {
-                    console.error("Error deleting comment:", error);
-                    resolve(); // Resolve anyway to avoid hanging promises
+      {/* Comments Dialog - Using the Stable version to prevent auto-closing when adding comments */}
+      <StableDialogComments 
+        open={isCommentsDialogOpen} 
+        onOpenChange={setIsCommentsDialogOpen}
+        title={`Comments - ${task.title}`}
+        description="Add or view comments for this task"
+      >
+        <div className="mt-4 flex-1 overflow-hidden flex">
+          <TaskComments
+            taskId={task.id}
+            comments={task.comments || []}
+            onCommentAdded={(taskId, commentText) => {
+              // Only call onCommentAdded when there's actual comment text
+              if (commentText && commentText.trim()) {
+                onCommentAdded?.(taskId, commentText);
+              }
+            }}
+            teamMembers={teamMembers}
+            userRole={userRole}
+            onDeleteComment={(taskId, commentId) => {
+              return new Promise(async (resolve) => {
+                try {
+                  // Actually delete the comment using the parent component's function
+                  if (onCommentAdded) {
+                    // Pass a special marker to the parent component
+                    onCommentAdded(taskId, `__DELETE_COMMENT__${commentId}`);
                   }
-                });
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+                  
+                  resolve();
+                } catch (error) {
+                  console.error("Error deleting comment:", error);
+                  resolve(); // Resolve anyway to avoid hanging promises
+                }
+              });
+            }}
+          />
+        </div>
+      </StableDialogComments>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
