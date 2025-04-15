@@ -350,6 +350,18 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
         updatedAt: serverTimestamp()
       });
 
+      // Update local state to show the comment immediately
+      if (onTaskUpdate) {
+        const updatedTask: Task = {
+          ...task,
+          comments: [...(task.comments || []), newComment],
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Update the tasks array with the new comment
+        onTaskUpdate(updatedTask);
+      }
+
       toast({
         title: "Success",
         description: "Your comment has been added to the task.",

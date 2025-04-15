@@ -96,6 +96,17 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     task?.approvals?.length
   ]);
   
+  // Reset state when dialog opens or closes
+  useEffect(() => {
+    if (open && task) {
+      // When dialog opens, reset to the latest task data
+      setLocalTask(JSON.parse(JSON.stringify(task)));
+      
+      // Reset active tab to details when opening
+      setActiveTab("details");
+    }
+  }, [open, task]);
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-NZ', { 
@@ -155,33 +166,14 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const handleCommentAdded = (taskId: string, commentText: string) => {
     console.log('Comment added in TaskDetailDialog', taskId, commentText);
     
-    if (localTask) {
-      // Create a new comment locally for immediate UI update
-      const newComment: Comment = {
-        id: uuidv4(),
-        userId: currentUserId || '',
-        userName: teamMembers.find(m => m.id === currentUserId)?.name || 'You',
-        content: commentText,
-        timestamp: new Date().toISOString(),
-        taskId: taskId,
-        mentions: []
-      };
-      
-      // Create updated task with the new comment added
-      const updatedLocalTask: Task = {
-        ...localTask,
-        comments: [...localTask.comments || [], newComment],
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Update local state immediately for better UX
-      setLocalTask(updatedLocalTask);
-    }
-    
     // The actual update is handled at the TaskBoard level
     // This function is passed to ensure the parent component is notified
     if (onCommentAdded) {
       onCommentAdded(taskId, commentText);
+      
+      // Note: We're not updating local state here because the parent component
+      // will handle the Firestore update, and the component will re-render
+      // when the parent's state changes. This prevents duplicate comments.
     }
   };
 
