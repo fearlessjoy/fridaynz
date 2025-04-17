@@ -237,113 +237,154 @@ const SubTaskManager: React.FC<SubTaskManagerProps> = ({
     return member ? member.name : "Unassigned";
   };
   
-  const progress = calculateProgress();
+  const getAssigneeAvatar = (assignedTo?: string) => {
+    if (!assignedTo) return null;
+    const member = teamMembers.find(m => m.id === assignedTo);
+    return member ? member.avatar : null;
+  };
+  
+  const getAssigneeInitials = (assignedTo?: string) => {
+    if (!assignedTo) return null;
+    const member = teamMembers.find(m => m.id === assignedTo);
+    return member ? member.name.charAt(0) : null;
+  };
   
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-semibold">Subtasks</h3>
-        <div className="text-sm text-muted-foreground">
-          {task.subtasks?.filter(st => st.completed).length || 0} of {task.subtasks?.length || 0} completed
+    <div className="space-y-4 relative">
+      {/* Add new subtask input */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1">
+          <Input
+            placeholder="Add a new subtask..."
+            value={newSubtaskTitle}
+            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleAddSubtask();
+              }
+            }}
+            disabled={isLoading}
+            className="w-full"
+          />
         </div>
-      </div>
-      
-      {/* Progress bar */}
-      <div className="mb-4">
-        <div className="flex justify-between text-sm mb-1">
-          <span>Progress</span>
-          <span>{progress}%</span>
-        </div>
-        <Progress value={progress} className="h-2" />
-      </div>
-      
-      {/* Add new subtask */}
-      <div className="flex gap-2 mb-4">
-        <Input
-          placeholder="Add a new subtask"
-          value={newSubtaskTitle}
-          onChange={(e) => setNewSubtaskTitle(e.target.value)}
-          className="flex-1"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleAddSubtask();
-            }
-          }}
-          disabled={isLoading}
-        />
-        <Button onClick={handleAddSubtask} size="sm" disabled={isLoading}>
-          {isLoading ? 'Adding...' : <><Plus className="h-4 w-4 mr-1" /> Add</>}
+        <Button 
+          onClick={handleAddSubtask} 
+          disabled={!newSubtaskTitle.trim() || isLoading}
+          className="h-9 sm:h-10"
+        >
+          <Plus className="h-4 w-4 mr-1" /> Add
         </Button>
       </div>
       
-      {/* Subtasks list */}
-      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+      {/* Subtasks Progress */}
+      {task.subtasks && task.subtasks.length > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-sm font-medium">Progress</span>
+            <span className="text-sm">{calculateProgress()}%</span>
+          </div>
+          <Progress value={calculateProgress()} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1">
+            {task.subtasks.filter(subtask => subtask.completed).length} of {task.subtasks.length} subtasks completed
+          </p>
+        </div>
+      )}
+
+      {/* Subtasks List */}
+      <div className="space-y-3">
         {task.subtasks && task.subtasks.length > 0 ? (
-          <div className="rounded-md border">
-            {task.subtasks.map((subtask, index) => (
-              <div key={subtask.id} className={`p-3 ${index !== task.subtasks!.length - 1 ? 'border-b' : ''}`}>
+          <div>
+            {task.subtasks.map((subtask) => (
+              <div 
+                key={subtask.id} 
+                className="group flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 mb-2 border-b last:border-b-0 pb-2"
+              >
                 {editingSubtaskId === subtask.id ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row w-full gap-2">
                     <Input
                       value={editedSubtaskTitle}
                       onChange={(e) => setEditedSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveEditedSubtask();
+                        } else if (e.key === 'Escape') {
+                          setEditingSubtaskId(null);
+                        }
+                      }}
                       className="flex-1"
                       autoFocus
-                      disabled={isLoading}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEditedSubtask();
-                        if (e.key === 'Escape') setEditingSubtaskId(null);
-                      }}
                     />
-                    <Button variant="outline" size="sm" onClick={() => setEditingSubtaskId(null)} disabled={isLoading}>Cancel</Button>
-                    <Button size="sm" onClick={saveEditedSubtask} disabled={isLoading}>
-                      {isLoading ? 'Saving...' : 'Save'}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-2">
-                      <Checkbox 
-                        id={`subtask-${subtask.id}`} 
-                        checked={subtask.completed} 
-                        onCheckedChange={() => handleToggleSubtask(subtask.id)} 
-                        className="mt-1"
-                        disabled={isLoading}
-                      />
-                      <div>
-                        <Label 
-                          htmlFor={`subtask-${subtask.id}`} 
-                          className={`font-medium ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}
-                        >
-                          {subtask.title}
-                        </Label>
-                        {subtask.assignedTo && (
-                          <div className="flex items-center mt-1 text-xs text-muted-foreground">
-                            <Avatar className="h-4 w-4 mr-1">
-                              <AvatarImage src={teamMembers.find(m => m.id === subtask.assignedTo)?.avatar} />
-                              <AvatarFallback>{getAssigneeName(subtask.assignedTo)?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {getAssigneeName(subtask.assignedTo)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditSubtask(subtask)} disabled={isLoading}>
-                        <PencilLine className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteSubtask(subtask.id)} disabled={isLoading}>
+                    <div className="flex gap-2 mt-2 sm:mt-0">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setEditingSubtaskId(null)}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={saveEditedSubtask}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="flex items-center h-6">
+                      <Checkbox 
+                        id={`subtask-${subtask.id}`}
+                        checked={subtask.completed}
+                        onCheckedChange={() => handleToggleSubtask(subtask.id)}
+                        disabled={isLoading}
+                        className="mr-1"
+                      />
+                    </div>
+                    <Label 
+                      htmlFor={`subtask-${subtask.id}`}
+                      className={`flex-1 text-sm cursor-pointer ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}
+                    >
+                      {subtask.title}
+                      {subtask.assignedTo && (
+                        <div className="flex items-center mt-1">
+                          <Avatar className="h-5 w-5 mr-1">
+                            <AvatarImage src={getAssigneeAvatar(subtask.assignedTo)} />
+                            <AvatarFallback className="text-[10px]">{getAssigneeInitials(subtask.assignedTo)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground">{getAssigneeName(subtask.assignedTo)}</span>
+                        </div>
+                      )}
+                    </Label>
+                    <div className="flex gap-1 invisible group-hover:visible sm:flex">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0" 
+                        onClick={() => handleEditSubtask(subtask)}
+                        disabled={isLoading}
+                      >
+                        <PencilLine className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive" 
+                        onClick={() => handleDeleteSubtask(subtask.id)}
+                        disabled={isLoading}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground border border-dashed rounded-md">
-            No subtasks yet. Add some to track progress.
+          <div className="text-center py-4 text-muted-foreground border border-dashed rounded-md">
+            <p>No subtasks yet. Add some to track your progress!</p>
           </div>
         )}
       </div>

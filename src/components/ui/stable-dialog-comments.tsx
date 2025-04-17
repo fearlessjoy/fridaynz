@@ -41,10 +41,10 @@ const StableDialogComments: React.FC<StableDialogCommentsProps> = ({
 
   return (
     <RadixDialog open={internalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[550px] h-[80vh] flex flex-col overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+      <DialogContent className="sm:max-w-[550px] w-[95vw] h-[80vh] max-h-[80vh] flex flex-col overflow-hidden">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="line-clamp-1 text-base sm:text-lg">{title}</DialogTitle>
+          {description && <DialogDescription className="text-sm">{description}</DialogDescription>}
         </DialogHeader>
         {children}
       </DialogContent>

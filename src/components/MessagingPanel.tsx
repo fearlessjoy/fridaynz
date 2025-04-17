@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface MessagingPanelProps {
   teamMembers: TeamMember[];
@@ -210,6 +211,22 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
       console.error("Error formatting conversation time:", error);
       return "";
     }
+  };
+
+  const formatCommentWithMentions = (text: string): React.ReactNode => {
+    return text.split(' ').map((word, index) => {
+      if (word.startsWith('@')) {
+        const userName = word.slice(1);
+        if (teamMembers.some(member => member.name === userName)) {
+          return (
+            <span key={index} className="text-primary font-medium">
+              {word}{' '}
+            </span>
+          );
+        }
+      }
+      return word + ' ';
+    });
   };
 
   const handleSendMessage = async () => {
@@ -438,47 +455,34 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
   };
 
   const renderMessage = (message: Message) => {
-    const sender = getTeamMember(message.senderId);
+    if (!message || !message.id || !message.content) return null;
+    
     const isCurrentUser = message.senderId === currentUserId;
     
     return (
       <div
         key={message.id}
-        className={`flex ${isCurrentUser ? "justify-end" : "justify-start"} mb-4`}
-      >
-        {!isCurrentUser && (
-          <Avatar className="h-8 w-8 mr-2">
-            <AvatarImage src={sender?.avatar} alt={sender?.name} />
-            <AvatarFallback>{sender ? getInitials(sender.name) : "?"}</AvatarFallback>
-          </Avatar>
+        className={cn(
+          "flex mb-2",
+          isCurrentUser ? "justify-end" : "justify-start"
         )}
+      >
         <div
-          className={`px-4 py-2 rounded-lg max-w-[70%] ${
+          className={cn(
+            "max-w-[80%] px-3 py-2 rounded-lg",
             isCurrentUser
-              ? "bg-kiwi-600 text-white"
-              : "bg-gray-100 dark:bg-gray-800"
-          }`}
-        >
-          {!isCurrentUser && activeConversation?.isGroup && (
-            <div className="text-xs font-medium mb-1 text-kiwi-600 dark:text-kiwi-400">
-              {sender?.name}
-            </div>
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted"
           )}
-          <p className="text-sm">{message.content}</p>
-          <div
-            className={`text-xs mt-1 ${
-              isCurrentUser ? "text-kiwi-100" : "text-gray-500"
-            }`}
-          >
+        >
+          {!isCurrentUser && (
+            <div className="font-medium text-xs mb-1">{message.senderName}</div>
+          )}
+          <div className="text-sm">{formatCommentWithMentions(message.content)}</div>
+          <div className="text-xs mt-1 opacity-70">
             {formatMessageTime(message.timestamp)}
           </div>
         </div>
-        {isCurrentUser && (
-          <Avatar className="h-8 w-8 ml-2">
-            <AvatarImage src={sender?.avatar} alt={sender?.name} />
-            <AvatarFallback>{sender ? getInitials(sender.name) : "?"}</AvatarFallback>
-          </Avatar>
-        )}
       </div>
     );
   };
@@ -540,13 +544,18 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
 
   return (
     <div className="flex h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
-      <div className="w-1/3 border-r border-gray-200 dark:border-gray-800">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-          <h2 className="font-semibold text-lg">Messages</h2>
+      {/* Conversation List - Hidden on Mobile When Conversation is Active */}
+      <div className={cn(
+        "border-r border-gray-200 dark:border-gray-800 transition-all",
+        "md:w-1/3 w-full",
+        activeConversation && "hidden md:block"
+      )}>
+        <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+          <h2 className="font-semibold text-base">Messages</h2>
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Plus className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
             <DialogContent aria-describedby="group-member-description">
@@ -583,12 +592,12 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
                           className="mr-2"
                           disabled={member.id === currentUserId}
                         />
-                        <Avatar className="h-8 w-8 mr-2">
+                        <Avatar className="h-6 w-6 mr-2">
                           <AvatarImage src={member.avatar} alt={member.name} />
                           <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{member.name}</div>
+                          <div className="font-medium text-sm">{member.name}</div>
                           <div className="text-xs text-gray-500">{member.role}</div>
                         </div>
                       </div>
@@ -613,204 +622,168 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
             </DialogContent>
           </Dialog>
         </div>
-        <ScrollArea className="h-[calc(100%-4rem)]">
+        
+        {/* Quick Contacts Section */}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-800">
+          <h3 className="text-xs font-medium text-gray-500 mb-2">Quick Contacts</h3>
+          <div className="flex overflow-x-auto space-x-2 pb-2">
+            {teamMembers.filter(member => member.id !== currentUserId).map(member => (
+              <Button
+                key={member.id}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 whitespace-nowrap py-1 px-2 h-8 text-xs"
+                onClick={() => handleCreateDirectMessage(member.id)}
+              >
+                <Avatar className="h-4 w-4">
+                  <AvatarImage src={member.avatar} alt={member.name} />
+                  <AvatarFallback className="text-[8px]">{getInitials(member.name)}</AvatarFallback>
+                </Avatar>
+                <span>{member.name}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+        
+        <ScrollArea className="h-[calc(100%-6rem)]">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin text-kiwi-600" />
-              <span className="ml-2">Loading conversations...</span>
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center p-6 h-32">
+              <MessageCircle className="h-10 w-10 mb-2 text-muted-foreground opacity-20" />
+              <p className="text-sm text-muted-foreground">No conversations yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Start a new conversation with your team members</p>
             </div>
           ) : (
-            <>
-              {/* Quick contacts section - always show at top */}
-              <div className="p-3 border-b border-gray-200 dark:border-gray-800">
-                <h3 className="font-medium text-sm mb-2">Start a conversation</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {teamMembers
-                    .filter(member => member.id !== currentUserId)
-                    .map(member => (
-                      <div
-                        key={member.id}
-                        className="flex items-center p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md cursor-pointer border"
-                        onClick={() => handleCreateDirectMessage(member.id)}
-                      >
-                        <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="overflow-hidden">
-                          <div className="text-sm font-medium truncate">{member.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{member.role}</div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-              
-              {conversations.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  <p>No conversations yet.</p>
-                  <p className="text-sm mt-2">Create a group or message a team member to get started.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-800">
-                    <h3 className="font-medium text-sm mb-2">Recent conversations</h3>
-                  </div>
-                  {conversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      className={`p-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${
-                        activeConversation?.id === conversation.id ? "bg-gray-100 dark:bg-gray-800" : ""
-                      }`}
-                      onClick={() => setActiveConversation(conversation)}
-                    >
-                      <div className="flex items-center">
-                        {conversation.isGroup ? (
-                          <div className="relative w-12 h-12 flex-shrink-0">
-                            <Avatar className="absolute top-0 left-0 h-8 w-8">
-                              <AvatarImage src={getTeamMember(conversation.participants[0])?.avatar} />
-                              <AvatarFallback>
-                                {getTeamMember(conversation.participants[0]) 
-                                  ? getInitials(getTeamMember(conversation.participants[0])!.name) 
-                                  : "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <Avatar className="absolute bottom-0 right-0 h-8 w-8">
-                              <AvatarImage src={getTeamMember(conversation.participants[1])?.avatar} />
-                              <AvatarFallback>
-                                {getTeamMember(conversation.participants[1]) 
-                                  ? getInitials(getTeamMember(conversation.participants[1])!.name) 
-                                  : "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
-                        ) : (
-                          <Avatar className="h-12 w-12 mr-3 flex-shrink-0">
-                            <AvatarImage 
-                              src={getTeamMember(conversation.participants.find(id => id !== currentUserId) || "")?.avatar} 
-                            />
-                            <AvatarFallback>
-                              {getTeamMember(conversation.participants.find(id => id !== currentUserId) || "") 
-                                ? getInitials(getTeamMember(conversation.participants.find(id => id !== currentUserId) || "")!.name) 
-                                : "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className="ml-3 flex-1 overflow-hidden">
-                          <div className="flex justify-between">
-                            <div className="font-medium truncate">
-                              {getConversationName(conversation)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {formatConversationTime(conversation.lastMessageAt)}
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-500 truncate">
-                            {getLatestMessage(conversation)}
-                          </div>
-                        </div>
-                      </div>
+            <div className="divide-y divide-gray-200 dark:divide-gray-800">
+              {conversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className={cn(
+                    "flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800",
+                    activeConversation?.id === conversation.id && "bg-gray-100 dark:bg-gray-800"
+                  )}
+                  onClick={() => setActiveConversation(conversation)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center">
+                      <h3 className="text-sm font-medium truncate">
+                        {getConversationName(conversation)}
+                      </h3>
+                      <span className="text-[10px] text-gray-500 ml-2">
+                        {formatConversationTime(conversation.lastMessageAt)}
+                      </span>
                     </div>
-                  ))}
-                </>
-              )}
-            </>
+                    <p className="text-xs text-gray-500 truncate">
+                      {getLatestMessage(conversation)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </ScrollArea>
       </div>
-      <div className="flex-1 flex flex-col">
-        {activeConversation ? (
-          <>
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">{getConversationName(activeConversation)}</h2>
-                <div className="text-xs text-gray-500">
-                  {activeConversation.isGroup 
-                    ? `${activeConversation.participants.length} members` 
-                    : `${getTeamMember(activeConversation.participants.find(id => id !== currentUserId) || "")?.role || ""}`
-                  }
+
+      {/* Active Conversation - Takes Full Width on Mobile */}
+      {activeConversation ? (
+        <div className="flex-1 flex flex-col max-w-full">
+          <div className="border-b border-gray-200 dark:border-gray-800 p-3 flex justify-between items-center">
+            {/* Back button shown only on mobile */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden h-8 w-8" 
+                onClick={() => setActiveConversation(null)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+              </Button>
+              <h2 className="font-medium text-sm">
+                {getConversationName(activeConversation)}
+              </h2>
+            </div>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear messages</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all messages in this conversation. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearMessages}>Clear Messages</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          <ScrollArea className="flex-1 p-3">
+            {activeConversation.messages && activeConversation.messages.length > 0 ? (
+              activeConversation.messages
+                .filter(message => message && message.id && message.content)
+                .map(message => renderMessage(message))
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                  <p className="text-sm text-muted-foreground">No messages yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Send a message to start the conversation</p>
                 </div>
               </div>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Clear all messages?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all messages in this conversation. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleClearMessages}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Clear Messages
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {activeConversation.messages && activeConversation.messages.length > 0 ? (
-                  activeConversation.messages.map((message) => {
-                    // Skip rendering invalid messages
-                    if (!message || !message.id || !message.content) {
-                      return null;
-                    }
-                    return renderMessage(message);
-                  })
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No messages yet. Start the conversation!
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex space-x-2">
-                <Textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
-                <Button onClick={handleSendMessage} disabled={!newMessage.trim() || isSending}>
-                  {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full text-center p-4">
-            <div>
-              <MessageCircle className="h-12 w-12 text-kiwi-200 mx-auto mb-4" />
-              <h3 className="text-xl font-medium mb-2">Your Messages</h3>
-              <p className="text-muted-foreground">
-                Select a conversation or start a new one to begin messaging.
-              </p>
-            </div>
+            )}
+            <div ref={messagesEndRef} />
+          </ScrollArea>
+
+          <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex items-end gap-2">
+            <Textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="min-h-[2.5rem] max-h-24 resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Button
+              size="icon"
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || isSending}
+              className="h-9 w-9 shrink-0"
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="hidden md:flex md:flex-1 items-center justify-center p-8">
+          <div className="text-center">
+            <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+            <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select a conversation from the sidebar or start a new one
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

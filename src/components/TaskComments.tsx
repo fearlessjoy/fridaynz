@@ -242,16 +242,16 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => (
-              <div key={comment.id} className="group flex gap-3 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <Avatar className="w-8 h-8 shrink-0">
+              <div key={comment.id} className="group flex gap-3 p-3 sm:p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <Avatar className="w-7 h-7 sm:w-8 sm:h-8 shrink-0">
                   <AvatarImage src={`https://ui-avatars.com/api/?name=${comment.userName}`} />
                   <AvatarFallback>{comment.userName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{comment.userName}</span>
-                      <span className="text-xs text-muted-foreground">
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 mr-2">
+                      <span className="font-medium truncate max-w-[120px] sm:max-w-none">{comment.userName}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
                       </span>
                     </div>
@@ -259,7 +259,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-100/50"
+                        className="opacity-80 sm:opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 hover:bg-red-100/50 h-7 w-7 p-0"
                         onClick={() => handleDeleteClick(comment)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -279,17 +279,17 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
       {/* Comment Input - fixed at bottom */}
       <div className="flex-shrink-0 border-t pt-3">
         <div className="flex gap-2 items-start">
-          <Avatar className="w-8 h-8 mt-1 shrink-0">
+          <Avatar className="w-7 h-7 sm:w-8 sm:h-8 mt-1 shrink-0">
             <AvatarImage src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name || 'U'}`} />
             <AvatarFallback>{userData?.name?.charAt(0) || 'U'}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
             <Textarea
               ref={textareaRef}
-              placeholder="Add a comment... (Use @ to mention team members)"
+              placeholder="Add a comment... (Use @ to mention)"
               value={newComment}
               onChange={handleTextareaChange}
-              className="min-h-[80px] resize-none bg-muted/30"
+              className="min-h-[60px] sm:min-h-[80px] resize-none bg-muted/30 text-sm"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -331,16 +331,17 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId, comments, onComment
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-muted-foreground"
+                className="text-muted-foreground h-8 px-2"
                 onClick={() => setShowMentions(true)}
               >
                 <AtSign className="w-4 h-4 mr-1" />
-                Mention
+                <span className="hidden sm:inline">Mention</span>
               </Button>
               <Button 
                 onClick={handleAddComment} 
                 disabled={!newComment.trim() || isSubmitting}
                 size="sm"
+                className="h-8"
               >
                 {isSubmitting ? (
                   'Adding...'

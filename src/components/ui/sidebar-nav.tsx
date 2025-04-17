@@ -14,14 +14,43 @@ interface SidebarContextType {
   openMobile: boolean;
   setOpenMobile: React.Dispatch<React.SetStateAction<boolean>>;
   toggleSidebar: () => void;
+  isMobile: boolean;
 }
 
 const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: SidebarProviderProps) {
-  const [open, setOpen] = React.useState(true);
+  // Check if we're on the client side and if the screen is mobile-sized
+  const isClient = typeof window !== "undefined";
+  const initialIsMobile = isClient ? window.innerWidth < 768 : false;
+  
+  // Set default state based on screen size - open on desktop, closed on mobile
+  const [open, setOpen] = React.useState(!initialIsMobile);
   const [openMobile, setOpenMobile] = React.useState(false);
-  const isMobile = typeof window !== "undefined" ? window.innerWidth < 768 : false;
+  const [isMobile, setIsMobile] = React.useState(initialIsMobile);
+  
+  // Handle window resize to update mobile state
+  React.useEffect(() => {
+    if (!isClient) return;
+    
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Auto-close sidebar when switching to mobile
+      if (mobile && open) {
+        setOpen(false);
+      }
+      
+      // Auto-open sidebar when switching to desktop
+      if (!mobile && !open) {
+        setOpen(true);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isClient, open]);
 
   const toggleSidebar = React.useCallback(() => {
     if (isMobile) {
@@ -39,6 +68,7 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
         openMobile,
         setOpenMobile,
         toggleSidebar,
+        isMobile,
       }}
     >
       {children}
@@ -60,16 +90,18 @@ interface SidebarProps {
 }
 
 export function Sidebar({ children, className }: SidebarProps) {
-  const { open, openMobile, setOpenMobile } = useSidebar();
-  const isMobile = typeof window !== "undefined" ? window.innerWidth < 768 : false;
+  const { open, openMobile, setOpenMobile, isMobile } = useSidebar();
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
-        <SheetContent side="left" className="p-0 w-64">
-          <div className="flex flex-col h-full">{children}</div>
-        </SheetContent>
-      </Sheet>
+      <>
+        <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+          <SheetContent side="left" className="p-0 w-64">
+            <div className="flex flex-col h-full">{children}</div>
+          </SheetContent>
+        </Sheet>
+        <div className="w-0"></div> {/* Placeholder to maintain grid layout */}
+      </>
     );
   }
 
@@ -77,11 +109,12 @@ export function Sidebar({ children, className }: SidebarProps) {
     <div
       className={cn(
         "h-screen border-r transition-all duration-300 ease-in-out",
-        open ? "w-64" : "w-0 opacity-0",
+        open ? "w-64" : "w-0",
+        open ? "opacity-100" : "opacity-0",
         className
       )}
     >
-      <div className="flex flex-col h-full">{children}</div>
+      <div className={cn("flex flex-col h-full overflow-hidden", !open && "invisible w-0")}>{children}</div>
     </div>
   );
 }
@@ -102,7 +135,8 @@ interface SidebarTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
 }
 
 export function SidebarTrigger({ className, ...props }: SidebarTriggerProps) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, open, openMobile, isMobile } = useSidebar();
+  const isOpen = isMobile ? openMobile : open;
 
   return (
     <Button
@@ -110,9 +144,10 @@ export function SidebarTrigger({ className, ...props }: SidebarTriggerProps) {
       size="icon"
       onClick={toggleSidebar}
       className={cn("", className)}
+      aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       {...props}
     >
-      <PanelLeftIcon className="h-5 w-5" />
+      <PanelLeftIcon className={cn("h-5 w-5 transition-transform", isOpen ? "" : "rotate-180")} />
     </Button>
   );
 }

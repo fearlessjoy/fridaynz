@@ -27,6 +27,26 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { currentUser, userData, loadUserProfile } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>("staff");
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Load user profile when component mounts
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (currentUser && !userData?.name && !loadingProfile) {
+      setLoadingProfile(true);
+      
+      loadUserProfile().finally(() => {
+        if (isMounted) {
+          setLoadingProfile(false);
+        }
+      });
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser, userData, loadUserProfile]);
 
   // Use app data context to access and update data
   const { 
@@ -63,20 +83,7 @@ const Dashboard = () => {
     }
   };
 
-  // Debug log for user role
-  useEffect(() => {
-    if (userData) {
-      console.log("Current user role:", userData.userRole);
-      console.log("Is admin?", userData.userRole === "admin");
-      
-      // Force update user role when userData changes
-      if (userData.userRole) {
-        setUserRole(userData.userRole as UserRole);
-      }
-    }
-  }, [userData]);
-
-  // Existing useEffect for user role
+  // Set user role when userData changes
   useEffect(() => {
     if (userData?.userRole) {
       setUserRole(userData.userRole as UserRole);
@@ -224,68 +231,75 @@ const Dashboard = () => {
   // Check if user is admin
   const isAdmin = userData?.userRole === "admin";
   
+  // Get user display name once
+  const userDisplayName = userData?.name || 
+    currentUser?.displayName || 
+    (currentUser?.email ? currentUser.email.split('@')[0] : 'User');
+  
   return (
-    <div className="space-y-4 p-4">
+    <div className="sm:space-y-2 sm:p-3 p-2 space-y-1 w-full max-w-full">
       {/* Welcome Header */}
-      <div className="flex items-center justify-between bg-card p-4 rounded-lg shadow">
+      <div className="flex items-center justify-between bg-card p-2 sm:p-3 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-2xl font-semibold">Welcome, {userData?.name || 'User'}</h1>
-          <p className="text-sm text-muted-foreground mt-1">Role: {userRole.charAt(0).toUpperCase() + userRole.slice(1)}</p>
+          <h1 className="text-lg font-semibold">
+            Welcome, {userDisplayName}
+          </h1>
+          <p className="text-xs text-muted-foreground">Role: {userRole.charAt(0).toUpperCase() + userRole.slice(1)}</p>
         </div>
       </div>
 
-      <Tabs defaultValue="tasks" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          {userRole === "admin" && <TabsTrigger value="team">Team Management</TabsTrigger>}
+      <Tabs defaultValue="tasks" className="sm:space-y-2 space-y-1">
+        <TabsList className="h-8 w-full">
+          <TabsTrigger value="tasks" className="text-xs">Tasks</TabsTrigger>
+          <TabsTrigger value="messages" className="text-xs">Messages</TabsTrigger>
+          {userRole === "admin" && <TabsTrigger value="team" className="text-xs">Team Management</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="tasks" className="space-y-4">
+        <TabsContent value="tasks" className="sm:space-y-2 space-y-1">
           {/* Dashboard Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+          <div className="grid grid-cols-2 sm:gap-2 gap-1">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1.5 px-2 sm:py-2 sm:px-3">
+                <CardTitle className="text-xs font-medium">
                   Todo Tasks
                 </CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <BarChart3 className="h-3 w-3 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{todoCount}</div>
+              <CardContent className="py-1.5 px-2 sm:py-2 sm:px-3">
+                <div className="text-xl font-bold">{todoCount}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1.5 px-2 sm:py-2 sm:px-3">
+                <CardTitle className="text-xs font-medium">
                   In Progress
                 </CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-3 w-3 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{inProgressCount}</div>
+              <CardContent className="py-1.5 px-2 sm:py-2 sm:px-3">
+                <div className="text-xl font-bold">{inProgressCount}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1.5 px-2 sm:py-2 sm:px-3">
+                <CardTitle className="text-xs font-medium">
                   Pending Approvals
                 </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-3 w-3 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{pendingApprovalCount}</div>
+              <CardContent className="py-1.5 px-2 sm:py-2 sm:px-3">
+                <div className="text-xl font-bold">{pendingApprovalCount}</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1.5 px-2 sm:py-2 sm:px-3">
+                <CardTitle className="text-xs font-medium">
                   Team Members
                 </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-3 w-3 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamMembers.length}</div>
+              <CardContent className="py-1.5 px-2 sm:py-2 sm:px-3">
+                <div className="text-xl font-bold">{teamMembers.length}</div>
               </CardContent>
             </Card>
           </div>
@@ -300,8 +314,8 @@ const Dashboard = () => {
           />
         </TabsContent>
 
-        <TabsContent value="messages" className="space-y-4">
-          <div className="border rounded-lg h-[calc(100vh-12rem)]">
+        <TabsContent value="messages" className="sm:space-y-2 space-y-1">
+          <div className="border rounded-lg h-[calc(100vh-9.5rem)]">
             <MessagingPanel 
               teamMembers={teamMembers} 
               currentUserId={currentUser?.uid || ""} 

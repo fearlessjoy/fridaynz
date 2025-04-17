@@ -226,13 +226,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   return (
     <>
       <StableDialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] flex flex-col overflow-hidden" aria-describedby="task-detail-description">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] w-[95vw] flex flex-col overflow-hidden" aria-describedby="task-detail-description">
           <DialogHeader>
             <div className="flex items-start justify-between">
-              <DialogTitle>{localTask?.title}</DialogTitle>
-              <div className="flex items-center gap-2">
-                {/* Priority badge removed from here */}
-              </div>
+              <DialogTitle className="break-words mr-2 pr-2">{localTask?.title}</DialogTitle>
             </div>
           </DialogHeader>
           <div id="task-detail-description" className="sr-only">
@@ -240,42 +237,45 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
           </div>
           
           <Tabs defaultValue="details" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-4 w-full h-12 bg-background border-b mb-3">
+            <TabsList className="grid grid-cols-4 w-full h-auto md:h-12 bg-background border-b mb-3">
               <TabsTrigger 
                 value="details" 
-                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-3 transition-all"
+                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-2 md:py-3 transition-all"
               >
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5" />
-                  Details
+                <div className="flex items-center gap-1 md:gap-2">
+                  <CalendarDays className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-sm md:text-base">Details</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger 
                 value="subtasks" 
-                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-3 transition-all"
+                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-2 md:py-3 transition-all"
               >
-                <div className="flex items-center gap-2">
-                  <ListChecks className="h-5 w-5" />
-                  Subtasks {localTask?.subtasks?.length ? `(${localTask.subtasks.length})` : ''}
+                <div className="flex items-center gap-1 md:gap-2">
+                  <ListChecks className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-sm md:text-base">Subtasks</span> 
+                  <span className="hidden md:inline">{localTask?.subtasks?.length ? `(${localTask.subtasks.length})` : ''}</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger 
                 value="comments" 
-                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-3 transition-all"
+                className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-2 md:py-3 transition-all"
               >
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5" />
-                  Comments {localTask?.comments?.length ? `(${localTask.comments.length})` : ''}
+                <div className="flex items-center gap-1 md:gap-2">
+                  <MessageCircle className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-sm md:text-base">Comments</span>
+                  <span className="hidden md:inline">{localTask?.comments?.length ? `(${localTask.comments.length})` : ''}</span>
                 </div>
               </TabsTrigger>
               {hasApprovalTab && (
                 <TabsTrigger 
                   value="approvals"
-                  className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-3 transition-all"
+                  className="data-[state=active]:bg-muted data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary font-medium text-base py-2 md:py-3 transition-all"
                 >
-                  <div className="flex items-center gap-2">
-                    <ThumbsUp className="h-5 w-5" />
-                    Approvals {localTask?.approvals?.length ? `(${localTask.approvals.length})` : ''}
+                  <div className="flex items-center gap-1 md:gap-2">
+                    <ThumbsUp className="h-4 w-4 md:h-5 md:w-5" />
+                    <span className="text-sm md:text-base">Approvals</span>
+                    <span className="hidden md:inline">{localTask?.approvals?.length ? `(${localTask.approvals.length})` : ''}</span>
                   </div>
                 </TabsTrigger>
               )}
@@ -287,11 +287,11 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   {/* Task Description */}
                   <div>
                     <h4 className="text-sm font-medium mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">{localTask?.description}</p>
+                    <p className="text-sm text-muted-foreground break-words">{localTask?.description}</p>
                   </div>
 
                   {/* Task Details */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium mb-2">Category</h4>
                       <p className="text-sm text-muted-foreground">{localTask?.category}</p>
@@ -303,7 +303,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   </div>
 
                   {/* Priority Selector and Badge */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <h4 className="text-sm font-medium mb-2">Priority</h4>
                       <div className="flex items-center gap-3">
@@ -311,7 +311,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                           defaultValue={localTask?.priority} 
                           onValueChange={handlePriorityChange}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-[120px] sm:w-[180px]">
                             <SelectValue placeholder={localTask?.priority} />
                           </SelectTrigger>
                           <SelectContent>
@@ -329,25 +329,25 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   </div>
 
                   {/* Dates */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4" />
+                      <CalendarDays className="h-4 w-4 shrink-0" />
                       <div>
                         <h4 className="text-sm font-medium">Due Date</h4>
                         <p className="text-sm text-muted-foreground">{formatDate(localTask?.dueDate)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <div>
+                      <User className="h-4 w-4 shrink-0" />
+                      <div className="min-w-0 overflow-hidden">
                         <h4 className="text-sm font-medium">Assigned To</h4>
                         {assignee ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Avatar className="h-6 w-6 shrink-0">
                               <AvatarImage src={assignee.avatar || `https://ui-avatars.com/api/?name=${assignee.name || 'U'}`} />
                               <AvatarFallback>{getAvatarFallback(assignee.name)}</AvatarFallback>
                             </Avatar>
-                            <span className="text-sm text-muted-foreground">{assignee.name || 'Unknown User'}</span>
+                            <span className="text-sm text-muted-foreground truncate">{assignee.name || 'Unknown User'}</span>
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground">Unassigned</p>

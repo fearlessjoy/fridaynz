@@ -19,6 +19,8 @@ import { sendTaskUpdateEmail } from '@/lib/notificationService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import MobileTaskView from './MobileTaskView';
+import { useDevice } from '@/hooks/use-mobile';
 
 type TaskBoardProps = {
   tasks: Task[];
@@ -45,6 +47,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
   const [taskCreationOpen, setTaskCreationOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { currentUser, userData } = useAuth();
+  const { isMobile } = useDevice();
   
   // Use the currentUserId from props or fall back to the current user's uid
   const userId = currentUserId || currentUser?.uid;
@@ -774,85 +777,79 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
     );
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold tracking-tight">Task Board</h2>
-        <div className="flex items-center gap-2">
-          {userRole && (
-            <Select 
-              value={selectedCategory}
-              onValueChange={(value) => {
-                setSelectedCategory(value);
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Operations">Operations</SelectItem>
-                <SelectItem value="Legal">Legal</SelectItem>
-                <SelectItem value="Finance">Finance</SelectItem>
-                <SelectItem value="Site">Site</SelectItem>
-                <SelectItem value="Marketing">Marketing</SelectItem>
-                <SelectItem value="Licensing">Licensing</SelectItem>
-                <SelectItem value="Staffing">Staffing</SelectItem>
-                <SelectItem value="Menu">Menu</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          {userRole && (userRole === 'admin' || userRole === 'manager') && (
-            <TaskCreation 
-              teamMembers={teamMembers}
-              onCreateTask={onTaskUpdate}
-              userRole={userRole as 'admin' | 'manager' | 'staff'}
-            />
-          )}
-        </div>
-      </div>
+  // If on mobile, render the mobile view
+  if (isMobile) {
+    return (
+      <MobileTaskView
+        tasks={tasks}
+        teamMembers={teamMembers}
+        onTaskUpdate={onTaskUpdate}
+        userRole={userRole}
+        currentUserId={currentUserId}
+        getFilteredTasks={getFilteredTasks}
+        handleTaskSelect={handleTaskSelect}
+        handleAddComment={handleAddComment}
+        handleStatusChange={handleStatusChange}
+        handleDeleteComment={handleDeleteComment}
+        handleDeleteTask={handleDeleteTask}
+        getAssigneeForTask={getAssigneeForTask}
+        selectedTask={selectedTask}
+        taskDetailOpen={taskDetailOpen}
+        setTaskDetailOpen={setTaskDetailOpen}
+        handlePriorityChange={handlePriorityChange}
+        handleApprovalClick={handleApprovalClick}
+      />
+    );
+  }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-full">
-          <div className="flex items-center justify-between mb-3">
+  // Desktop view - the original TaskBoard rendering
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100vh-12rem)] overflow-auto md:overflow-hidden">
+        {/* Todo Column */}
+        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
+          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
             <h3 className="font-semibold text-lg tracking-tight">
               Todo ({getFilteredTasks("Todo").length})
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
             {renderTaskList("Todo")}
           </div>
         </div>
         
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-full">
-          <div className="flex items-center justify-between mb-3">
+        {/* In Progress Column */}
+        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
+          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
             <h3 className="font-semibold text-lg tracking-tight">
               In Progress ({getFilteredTasks("In Progress").length})
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
             {renderTaskList("In Progress")}
           </div>
         </div>
         
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-full">
-          <div className="flex items-center justify-between mb-3">
+        {/* Under Review Column */}
+        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
+          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
             <h3 className="font-semibold text-lg tracking-tight">
               Under Review ({getFilteredTasks("Under Review").length})
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
             {renderTaskList("Under Review")}
           </div>
         </div>
         
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-full">
-          <div className="flex items-center justify-between mb-3">
+        {/* Completed Column */}
+        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
+          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
             <h3 className="font-semibold text-lg tracking-tight">
               Completed ({getFilteredTasks("Completed").length})
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
             {renderTaskList("Completed")}
           </div>
         </div>

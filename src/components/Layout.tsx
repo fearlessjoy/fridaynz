@@ -8,9 +8,29 @@ import {
   SidebarTrigger,
   SidebarContent,
   SidebarFooter,
+  useSidebar
 } from "@/components/ui/sidebar-nav";
 import { Navigation } from "@/components/Navigation";
 import RefreshButton from "@/components/RefreshButton";
+
+// Floating sidebar button that appears when sidebar is closed
+function FloatingSidebarButton() {
+  const { open, toggleSidebar, isMobile } = useSidebar();
+  
+  if (isMobile || open) return null;
+  
+  return (
+    <Button 
+      variant="outline" 
+      size="icon"
+      className="absolute top-4 left-4 z-50 h-8 w-8 rounded-full shadow-md border"
+      onClick={toggleSidebar}
+      aria-label="Open sidebar"
+    >
+      <PanelLeftIcon className="h-4 w-4 rotate-180" />
+    </Button>
+  );
+}
 
 export interface LayoutProps {
   children: React.ReactNode;
@@ -19,7 +39,7 @@ export interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
-      <div className="grid grid-cols-[auto_1fr] min-h-screen w-full">
+      <div className="grid grid-cols-[auto_1fr] min-h-screen w-full relative">
         <Sidebar>
           <SidebarHeader>
             <SidebarTrigger />
@@ -39,6 +59,10 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </SidebarFooter>
         </Sidebar>
+        
+        {/* Floating sidebar toggle button */}
+        <FloatingSidebarButton />
+        
         <main className="flex-1">
           {children}
         </main>

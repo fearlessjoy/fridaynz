@@ -153,12 +153,12 @@ const TaskCard = ({
   return (
     <>
       <Card 
-        className="shadow-sm transition-all duration-200 hover:shadow-md hover:translate-y-[-2px] border-l-4 border-l-kiwi-500 overflow-hidden bg-card/80 backdrop-blur-sm cursor-pointer h-[280px] flex flex-col"
+        className="shadow-sm transition-all duration-200 hover:shadow-md hover:translate-y-[-2px] border-l-4 border-l-kiwi-500 overflow-hidden bg-card/80 backdrop-blur-sm cursor-pointer flex flex-col h-auto md:h-[280px]"
         onClick={() => onSelect?.(task)}
       >
         <CardHeader className="p-3 pb-0">
           <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2 w-[80%]">
+            <div className="flex items-center gap-2 w-[calc(100%-70px)]">
               <h3 className="font-medium text-sm line-clamp-1 overflow-hidden text-ellipsis">{task.title}</h3>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -201,7 +201,7 @@ const TaskCard = ({
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {getCategoryIcon()}
-              <span>{task.category}</span>
+              <span className="whitespace-nowrap">{task.category}</span>
             </div>
             <Button 
               variant="ghost" 
@@ -215,15 +215,15 @@ const TaskCard = ({
               </div>
             </Button>
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-            <CalendarDays className="h-4 w-4" />
-            <span>Due: {formatDate(task.dueDate)}</span>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 overflow-hidden text-ellipsis">
+            <CalendarDays className="h-4 w-4 shrink-0" />
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis">Due: {formatDate(task.dueDate)}</span>
           </div>
           
           {task.needsApproval && (
             <div className="flex items-center justify-between text-xs mb-2">
               <div className="flex items-center gap-1 text-muted-foreground">
-                <ThumbsUp className="h-4 w-4" />
+                <ThumbsUp className="h-4 w-4 shrink-0" />
                 <span>Approvals:</span>
               </div>
               <div className="flex items-center gap-1">
@@ -240,7 +240,7 @@ const TaskCard = ({
           )}
           
           {/* Enhanced progress information */}
-          <div className="mt-3 mb-1">
+          <div className="mt-auto mb-1">
             {/* Main task progress */}
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium">Progress</span>
@@ -278,8 +278,8 @@ const TaskCard = ({
           {assignee && (
             <HoverCard>
               <HoverCardTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer">
-                  <Avatar className="h-6 w-6">
+                <div className="flex items-center gap-2 cursor-pointer overflow-hidden">
+                  <Avatar className="h-6 w-6 shrink-0">
                     <AvatarImage src={assignee.avatar} alt={assignee.name} />
                     <AvatarFallback className="text-xs bg-kiwi-100 text-kiwi-800 dark:bg-kiwi-800 dark:text-kiwi-200">
                       {assignee.name && assignee.name.includes(' ') 
@@ -288,7 +288,7 @@ const TaskCard = ({
                       }
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs">
+                  <span className="text-xs truncate max-w-[100px]">
                     {assignee.name && assignee.name.length > 30 
                       ? (assignee.name.includes('@') ? 'User' : assignee.name.substring(0, 15) + '...')
                       : assignee.name || 'Unknown User'
