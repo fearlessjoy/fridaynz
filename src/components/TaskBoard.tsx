@@ -21,6 +21,7 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import MobileTaskView from './MobileTaskView';
 import { useDevice } from '@/hooks/use-mobile';
+import { useAppData } from '@/hooks/useAppData';
 
 type TaskBoardProps = {
   tasks: Task[];
@@ -48,6 +49,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const { currentUser, userData } = useAuth();
   const { isMobile } = useDevice();
+  const { dataLoading } = useAppData();
   
   // Use the currentUserId from props or fall back to the current user's uid
   const userId = currentUserId || currentUser?.uid;
@@ -776,6 +778,18 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
       </div>
     );
   };
+
+  // If the data is still loading, show a loading indicator
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If on mobile, render the mobile view
   if (isMobile) {

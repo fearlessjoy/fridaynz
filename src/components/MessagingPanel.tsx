@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Conversation, Message, TeamMember, MessageType } from "@/lib/types";
-import { Send, Plus, Loader2, MessageCircle, Trash2, MoreVertical } from "lucide-react";
+import { Send, Plus, Loader2, MessageCircle, Trash2, MoreVertical, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   getFirestore, 
@@ -170,12 +170,18 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
       .toUpperCase();
   };
 
-  const formatMessageTime = (timestamp: string): string => {
+  const formatMessageTime = (timestamp: string | any): string => {
     if (!timestamp) return "";
     
     try {
+      // Handle Firebase Timestamp objects
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        const date = timestamp.toDate();
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Handle ISO strings
       const date = new Date(timestamp);
-      // Check if date is valid before formatting
       if (isNaN(date.getTime())) {
         return "";
       }
@@ -186,11 +192,18 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
     }
   };
 
-  const formatConversationTime = (timestamp: string): string => {
+  const formatConversationTime = (timestamp: string | any): string => {
     if (!timestamp) return "";
     
     try {
-      const date = new Date(timestamp);
+      // Handle Firebase Timestamp objects
+      let date: Date;
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else {
+        date = new Date(timestamp);
+      }
+      
       // Check if date is valid
       if (isNaN(date.getTime())) {
         return "";
@@ -458,6 +471,7 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
     if (!message || !message.id || !message.content) return null;
     
     const isCurrentUser = message.senderId === currentUserId;
+    const senderName = message.senderName || getTeamMember(message.senderId)?.name || "Unknown User";
     
     return (
       <div
@@ -476,7 +490,7 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
           )}
         >
           {!isCurrentUser && (
-            <div className="font-medium text-xs mb-1">{message.senderName}</div>
+            <div className="font-medium text-xs mb-1">{senderName}</div>
           )}
           <div className="text-sm">{formatCommentWithMentions(message.content)}</div>
           <div className="text-xs mt-1 opacity-70">
@@ -696,54 +710,52 @@ const MessagingPanel: React.FC<MessagingPanelProps> = ({ teamMembers, currentUse
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:hidden h-8 w-8" 
+                className="md:hidden h-8 w-8 mr-2"
                 onClick={() => setActiveConversation(null)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left">
-                  <path d="m15 18-6-6 6-6"/>
-                </svg>
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h2 className="font-medium text-sm">
-                {getConversationName(activeConversation)}
-              </h2>
+              <h2 className="font-semibold">{getConversationName(activeConversation)}</h2>
             </div>
             
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Clear all messages">
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Clear messages</AlertDialogTitle>
+                  <AlertDialogTitle>Clear all messages?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete all messages in this conversation. This action cannot be undone.
+                    This will permanently delete all messages in this conversation.
+                    This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearMessages}>Clear Messages</AlertDialogAction>
+                  <AlertDialogAction onClick={handleClearMessages}>
+                    Clear Messages
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
 
-          <ScrollArea className="flex-1 p-3">
-            {activeConversation.messages && activeConversation.messages.length > 0 ? (
-              activeConversation.messages
-                .filter(message => message && message.id && message.content)
-                .map(message => renderMessage(message))
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                  <p className="text-sm text-muted-foreground">No messages yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Send a message to start the conversation</p>
+          {/* Messages Area */}
+          <ScrollArea className="h-[calc(100%-9rem)] p-4">
+            <div className="flex flex-col">
+              {activeConversation && activeConversation.messages && activeConversation.messages.length > 0 ? (
+                activeConversation.messages
+                  .filter(message => message && message.id && message.content)
+                  .map(message => renderMessage(message))
+              ) : (
+                <div className="text-center py-8 text-sm text-gray-500">
+                  No messages yet. Start the conversation!
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
           </ScrollArea>
 
           <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex items-end gap-2">

@@ -85,12 +85,12 @@ export interface Message {
   id: string;
   type: MessageType;
   content: string;
-  timestamp: any; // Firebase Timestamp
+  timestamp?: string | any; // Firebase Timestamp or ISO string, can be undefined
   senderId: string;
   senderName: string;
   recipientId: string;
   read: boolean;
-  taskId: string;
+  taskId?: string; // Make taskId optional 
 }
 
 export type Conversation = {

@@ -4,6 +4,7 @@ import { getCollection, refreshFirebaseConnection } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from './use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AppDataContextType {
   teamMembers: TeamMember[];
@@ -14,6 +15,7 @@ interface AppDataContextType {
   addTask: (task: Task) => void;
   updateTask: (task: Task) => void;
   refreshConnection: () => Promise<boolean>;
+  dataLoading: boolean;
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
@@ -21,7 +23,9 @@ const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [dataLoading, setDataLoading] = useState<boolean>(true);
   const { toast } = useToast();
+  const { currentUser, authInitialized } = useAuth();
 
   // Function to refresh Firebase connection with latest environment variables
   const refreshConnection = useCallback(async () => {
@@ -60,75 +64,108 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [toast]);
 
-  // Load team members from Firebase when the component mounts
+  // Load team members from Firebase when the component mounts and auth state changes
   useEffect(() => {
-    // Create a query for users
-    const usersQuery = query(
-      collection(db, 'users'),
-      orderBy('name', 'asc')
-    );
-
-    // Set up real-time listener for users
-    const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
-      const loadedMembers: TeamMember[] = [];
-      snapshot.forEach((doc) => {
-        const userData = doc.data();
-        // Only add active users
-        if (userData.active !== false) {
-          loadedMembers.push({
-            id: doc.id,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role || 'staff',
-            userRole: userData.userRole || 'staff',
-            avatar: userData.avatar || '/placeholder.svg'
-          });
-        }
-      });
-      setTeamMembers(loadedMembers);
-    }, (error) => {
-      console.error('Error loading team members:', error);
-    });
-
-    // Clean up listener on unmount
-    return () => unsubscribe();
-  }, []);
-
-  // Set up real-time listener for tasks
-  useEffect(() => {
-    // Create a query for tasks, ordered by creation date
-    const tasksQuery = query(
-      collection(db, 'tasks'),
-      orderBy('updatedAt', 'desc')
-    );
-
-    // Set up real-time listener with immediate response to changes
-    const unsubscribe = onSnapshot(
-      tasksQuery, 
-      { includeMetadataChanges: true },
-      (snapshot) => {
-        const loadedTasks: Task[] = [];
-        snapshot.forEach((doc) => {
-          const taskData = doc.data() as Task;
-          // Ensure the task has all required fields
-          loadedTasks.push({
-            ...taskData,
-            id: doc.id,
-            comments: taskData.comments || [],
-            approvals: taskData.approvals || [],
-          });
-        });
-        
-        setTasks(loadedTasks);
-      }, 
-      (error) => {
-        console.error('Error loading tasks:', error);
+    let unsubscribe = () => {};
+    
+    const loadTeamMembers = () => {
+      if (!currentUser || !authInitialized) {
+        setTeamMembers([]);
+        return () => {};
       }
-    );
+      
+      console.log("Setting up team members listener for user:", currentUser.uid);
+      setDataLoading(true);
+      
+      // Create a query for users
+      const usersQuery = query(
+        collection(db, 'users'),
+        orderBy('name', 'asc')
+      );
 
-    // Clean up listener on unmount
+      // Set up real-time listener for users
+      return onSnapshot(usersQuery, (snapshot) => {
+        const loadedMembers: TeamMember[] = [];
+        snapshot.forEach((doc) => {
+          const userData = doc.data();
+          // Only add active users
+          if (userData.active !== false) {
+            loadedMembers.push({
+              id: doc.id,
+              name: userData.name,
+              email: userData.email,
+              role: userData.role || 'staff',
+              userRole: userData.userRole || 'staff',
+              avatar: userData.avatar || '/placeholder.svg'
+            });
+          }
+        });
+        setTeamMembers(loadedMembers);
+        setDataLoading(false);
+      }, (error) => {
+        console.error('Error loading team members:', error);
+        setDataLoading(false);
+      });
+    };
+    
+    unsubscribe = loadTeamMembers();
+
+    // Clean up listener on unmount or when auth state changes
     return () => unsubscribe();
-  }, []);
+  }, [currentUser, authInitialized]);
+
+  // Set up real-time listener for tasks when auth state changes
+  useEffect(() => {
+    let unsubscribe = () => {};
+    
+    const loadTasks = () => {
+      if (!currentUser || !authInitialized) {
+        setTasks([]);
+        return () => {};
+      }
+      
+      console.log("Setting up tasks listener for user:", currentUser.uid);
+      setDataLoading(true);
+      
+      // Create a query for tasks, ordered by creation date
+      const tasksQuery = query(
+        collection(db, 'tasks'),
+        orderBy('updatedAt', 'desc')
+      );
+
+      // Set up real-time listener with immediate response to changes
+      return onSnapshot(
+        tasksQuery, 
+        { includeMetadataChanges: true },
+        (snapshot) => {
+          console.log(`Received tasks update with ${snapshot.docs.length} tasks`);
+          const loadedTasks: Task[] = [];
+          snapshot.forEach((doc) => {
+            const taskData = doc.data() as Task;
+            // Ensure the task has all required fields
+            loadedTasks.push({
+              ...taskData,
+              id: doc.id,
+              comments: taskData.comments || [],
+              approvals: taskData.approvals || [],
+            });
+          });
+          
+          setTasks(loadedTasks);
+          setDataLoading(false);
+        }, 
+        (error) => {
+          console.error('Error loading tasks:', error);
+          setDataLoading(false);
+        }
+      );
+    };
+    
+    unsubscribe = loadTasks();
+
+    // Clean up listener on unmount or when auth state changes
+    return () => unsubscribe();
+  }, [currentUser, authInitialized]);
 
   const addTeamMember = (member: TeamMember) => {
     setTeamMembers(prev => [...prev, member]);
@@ -192,7 +229,8 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       deleteTeamMember,
       addTask, 
       updateTask,
-      refreshConnection
+      refreshConnection,
+      dataLoading
     }}>
       {children}
     </AppDataContext.Provider>
