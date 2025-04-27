@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Task, TeamMember, TaskStatus } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { ChevronDown, Filter, Plus, CalendarDays, Check, ArrowRight, MoveRight, Home, Mail, User, LogOut } from 'lucide-react';
+import { ChevronDown, Filter, Plus, CalendarDays, Check, ArrowRight, MoveRight, Home, Mail, User, LogOut, ListChecks } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -239,7 +239,8 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
               sortedTasks.map((task) => {
                 const assignee = getAssigneeForTask(task);
                 const priorityStyle = priorityColors[task.priority] || {};
-                const progress = task.subtasks && task.subtasks.length > 0
+                const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+                const progress = hasSubtasks
                   ? Math.round((task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100)
                   : 0;
                 
@@ -249,10 +250,20 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
                     className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-1 border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow transition-all duration-150 cursor-pointer relative overflow-hidden"
                     onClick={() => handleTaskSelect(task)}
                   >
+                    {/* Subtask indicator badge - visible if task has subtasks */}
+                    {hasSubtasks && (
+                      <div className="absolute top-0 right-0 w-0 h-0 border-t-8 border-r-8 border-t-transparent border-r-blue-400"></div>
+                    )}
+                    
                     <div className="flex flex-col gap-0.5">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 pr-1">
-                          <h3 className="font-medium text-[10px] line-clamp-1">{task.title}</h3>
+                          <div className="flex items-center gap-1">
+                            <h3 className="font-medium text-[10px] line-clamp-1">{task.title}</h3>
+                            {hasSubtasks && (
+                              <ListChecks className="h-2.5 w-2.5 text-blue-500 flex-shrink-0" />
+                            )}
+                          </div>
                           <p className="text-[8px] text-gray-500 dark:text-gray-400 line-clamp-1">
                             {task.description}
                           </p>
@@ -264,12 +275,18 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
                       
                       <div className="flex items-center justify-between text-[8px] text-gray-500 dark:text-gray-400">
                         <span>{task.dueDate ? formatDate(task.dueDate) : ''}</span>
-                        <span>{task.comments?.length || 0}</span>
+                        <div className="flex items-center gap-0.5">
+                          {hasSubtasks && (
+                            <span className="text-blue-500">{task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}</span>
+                          )}
+                          <span>{task.comments?.length || 0} {task.comments?.length === 1 ? 'comment' : 'comments'}</span>
+                        </div>
                       </div>
                       
-                      {task.subtasks && task.subtasks.length > 0 && (
-                        <div>
-                          <Progress value={progress} className="h-0.5 mt-0.5" />
+                      {hasSubtasks && (
+                        <div className="relative mt-0.5">
+                          <Progress value={progress} className="h-1" />
+                          <span className="absolute right-0 top-[-1px] text-[6px] text-blue-600 font-medium">{progress}%</span>
                         </div>
                       )}
                       
