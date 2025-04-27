@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Task, TeamMember, TaskStatus } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { ChevronDown, Filter, Plus, CalendarDays, Check } from 'lucide-react';
+import { ChevronDown, Filter, Plus, CalendarDays, Check, ArrowRight, MoveRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import { Progress } from './ui/progress';
 import { formatDistanceToNow } from 'date-fns';
 import TaskDetailDialog from './TaskDetailDialog';
 import TaskCreation from './TaskCreation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface MobileTaskViewProps {
   tasks: Task[];
@@ -57,6 +58,27 @@ const priorityColors = {
   Medium: "bg-blue-100 text-blue-700",
   High: "bg-amber-100 text-amber-700",
   Urgent: "bg-red-100 text-red-700"
+};
+
+const statusColors: Record<TaskStatus, string> = {
+  "Todo": "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200",
+  "In Progress": "bg-blue-100 hover:bg-blue-200 text-blue-700 border-blue-200",
+  "Under Review": "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200",
+  "Completed": "bg-green-100 hover:bg-green-200 text-green-700 border-green-200"
+};
+
+const statusIcons: Record<TaskStatus, React.ReactNode> = {
+  "Todo": <div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-1 rounded-full bg-slate-400"></div></div>,
+  "In Progress": <div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-1 rounded-full bg-blue-400"></div></div>,
+  "Under Review": <div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-1 rounded-full bg-amber-400"></div></div>, 
+  "Completed": <div className="absolute inset-0 flex items-center justify-center"><div className="w-1 h-1 rounded-full bg-green-400"></div></div>
+};
+
+// Get next status based on current status
+const getNextStatus = (currentStatus: TaskStatus): TaskStatus => {
+  const statusOrder: TaskStatus[] = ["Todo", "In Progress", "Under Review", "Completed"];
+  const currentIndex = statusOrder.indexOf(currentStatus);
+  return currentIndex < statusOrder.length - 1 ? statusOrder[currentIndex + 1] : currentStatus;
 };
 
 const MobileTaskView: React.FC<MobileTaskViewProps> = ({
@@ -200,7 +222,7 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
               return (
                 <div 
                   key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-1 border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow transition-all duration-150 cursor-pointer"
+                  className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-1 border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow transition-all duration-150 cursor-pointer relative overflow-hidden"
                   onClick={() => handleTaskSelect(task)}
                 >
                   <div className="flex flex-col gap-0.5">
@@ -227,24 +249,71 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
                       </div>
                     )}
                     
-                    <div className="flex items-center justify-between">
-                      {task.category && (
-                        <span className="text-[8px] px-1 py-0 bg-gray-100 dark:bg-gray-700 rounded">
-                          {task.category}
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between mt-0.5 w-full">
+                      <div className="flex-shrink-0 max-w-[60%]">
+                        {task.category && (
+                          <span className="text-[8px] px-1 py-0 bg-gray-100 dark:bg-gray-700 rounded">
+                            {task.category}
+                          </span>
+                        )}
+                      </div>
                       
-                      {assignee && (
-                        <div className="flex items-center gap-0.5">
-                          <Avatar className="h-3 w-3">
-                            <AvatarImage src={assignee.avatar} alt={assignee.name} />
-                            <AvatarFallback className="text-[6px]">
-                              {assignee.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-[8px] line-clamp-1 max-w-[40px]">{assignee.name}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1 justify-end flex-shrink-0 max-w-[40%]">
+                        {/* Status change button with dropdown menu */}
+                        <DropdownMenu>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className={`p-0 h-3.5 w-3.5 rounded-full flex items-center justify-center ${statusColors[task.status]}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <ArrowRight className="h-2.5 w-2.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" align="end" className="text-[8px] py-1 px-2">
+                                <p>Change Status</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <DropdownMenuContent align="end" className="w-28 p-1">
+                            {["Todo", "In Progress", "Under Review", "Completed"].map((status) => (
+                              <DropdownMenuRadioItem
+                                key={status}
+                                value={status}
+                                className={`text-[10px] px-2 py-1 rounded-sm mb-0.5 ${task.status === status ? 'font-medium ' + statusColors[status as TaskStatus] : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(task, status as TaskStatus);
+                                }}
+                              >
+                                <div className="flex items-center gap-1">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${statusColors[status as TaskStatus].split(' ')[2].replace('text-', 'bg-')}`}></div>
+                                  <span>{status}</span>
+                                </div>
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        
+                        {assignee && (
+                          <div className="flex items-center gap-0.5">
+                            <Avatar className="h-3 w-3">
+                              <AvatarImage src={assignee.avatar} alt={assignee.name} />
+                              <AvatarFallback className="text-[6px]">
+                                {assignee.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-[8px] line-clamp-1 max-w-[30px]">{assignee.name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
