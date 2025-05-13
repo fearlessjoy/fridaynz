@@ -49,6 +49,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Documents collection rules
+    match /documents/{documentId} {
+      allow read: if isTeamMember();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.uploadedBy == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.uploadedBy == request.auth.uid || isAdmin()
+      );
+    }
+    
     // Conversations can only be read and written by participants
     match /conversations/{conversationId} {
       // Allow read operations (both list and get) for authenticated users

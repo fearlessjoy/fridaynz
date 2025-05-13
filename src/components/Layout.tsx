@@ -1,4 +1,4 @@
-import { PanelLeftIcon, Home, Mail, User, LogOut } from "lucide-react";
+import { PanelLeftIcon, Home, Mail, User, LogOut, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,6 +88,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           >
             <Mail className="h-5 w-5" />
             <span className="text-[10px] mt-0.5">Messages</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="flex flex-col items-center justify-center h-full w-full rounded-none" 
+            onClick={() => navigate('/documents')}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-[10px] mt-0.5">Documents</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

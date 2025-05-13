@@ -15,6 +15,14 @@ import {
   disableNetwork,
   writeBatch
 } from "firebase/firestore";
+import { 
+  getStorage, 
+  ref, 
+  uploadBytesResumable, 
+  getDownloadURL, 
+  listAll, 
+  deleteObject 
+} from "firebase/storage";
 
 // Firebase configuration with validation
 const getFirebaseConfig = () => {
@@ -50,6 +58,7 @@ console.log('Initializing Firebase with project ID:', firebaseConfig.projectId);
 let app = initializeApp(firebaseConfig);
 let auth = getAuth(app);
 let db = getFirestore(app);
+let storage = getStorage(app);
 
 /**
  * Refreshes the Firebase connection with the latest environment variables
@@ -67,6 +76,7 @@ export const refreshFirebaseConnection = async () => {
     app = initializeApp(newConfig, 'refresh-instance');
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app);
     
     // Reset network connection
     await resetFirestoreConnection();
@@ -590,6 +600,167 @@ export const checkUserExists = async (email: string) => {
     return !querySnapshot.empty;
   } catch (error) {
     console.error("Error checking user existence:", error);
+    throw error;
+  }
+};
+
+// Storage functions
+export const uploadFile = async (file: File, path: string, metadata: any = {}, onProgress?: (progress: number) => void) => {
+  try {
+    checkAuth();
+    const userId = auth.currentUser!.uid;
+    
+    // Create a storage reference
+    const storageRef = ref(storage, `${path}/${file.name}`);
+    
+    // Add user ID and timestamp to metadata
+    const timestamp = new Date();
+    const fileMetadata = {
+      ...metadata,
+      uploadedBy: userId,
+      uploadedAt: timestamp.toISOString(),
+      contentType: file.type
+    };
+    
+    // Upload file with metadata
+    const uploadTask = uploadBytesResumable(storageRef, file, { customMetadata: fileMetadata });
+    
+    // Return a promise that resolves with the download URL when complete
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          // Track progress if needed
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`Upload progress: ${progress}%`);
+          
+          // Call the progress callback if provided
+          if (onProgress) {
+            onProgress(progress);
+          }
+        },
+        (error) => {
+          console.error('Upload error:', error);
+          reject(error);
+        },
+        async () => {
+          // Upload completed successfully, get download URL
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            
+            // Save document reference in Firestore
+            const docData = {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              path: `${path}/${file.name}`,
+              url: downloadURL,
+              uploadedBy: userId,
+              uploadedAt: timestamp,
+              ...metadata
+            };
+            
+            await addDocument('documents', docData);
+            resolve({ url: downloadURL, ...docData });
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+};
+
+export const getFiles = async (path: string) => {
+  try {
+    checkAuth();
+    
+    // List all files in the specified path
+    const storageRef = ref(storage, path);
+    const result = await listAll(storageRef);
+    
+    // Get document references from Firestore
+    const documents = await getCollection('documents');
+    
+    // Map storage items to their metadata and download URLs
+    const filePromises = result.items.map(async (itemRef) => {
+      try {
+        const url = await getDownloadURL(itemRef);
+        
+        // Find matching document in Firestore
+        const docMatch = documents.find(doc => 
+          doc.path === `${path}/${itemRef.name}` || doc.url === url
+        );
+        
+        // Ensure we have a valid date for uploadedAt
+        let uploadedAt;
+        if (docMatch?.uploadedAt) {
+          if (typeof docMatch.uploadedAt === 'object' && docMatch.uploadedAt.toDate) {
+            // Handle Firestore Timestamp objects
+            uploadedAt = docMatch.uploadedAt.toDate();
+          } else if (docMatch.uploadedAt instanceof Date) {
+            uploadedAt = docMatch.uploadedAt;
+          } else if (typeof docMatch.uploadedAt === 'string') {
+            uploadedAt = new Date(docMatch.uploadedAt);
+            if (isNaN(uploadedAt.getTime())) {
+              uploadedAt = new Date(); // Fallback to current date if invalid
+            }
+          } else {
+            uploadedAt = new Date(); // Default to current date if unknown format
+          }
+        } else {
+          uploadedAt = new Date(); // Default to current date if missing
+        }
+        
+        return {
+          name: itemRef.name,
+          fullPath: itemRef.fullPath,
+          url,
+          // Merge with Firestore data but ensure valid uploadedAt
+          ...(docMatch || {}),
+          uploadedAt
+        };
+      } catch (error) {
+        console.error(`Error getting details for ${itemRef.name}:`, error);
+        return {
+          name: itemRef.name,
+          fullPath: itemRef.fullPath,
+          error: 'Failed to load details',
+          uploadedAt: new Date() // Ensure we always have a valid date
+        };
+      }
+    });
+    
+    return Promise.all(filePromises);
+  } catch (error) {
+    console.error('Error listing files:', error);
+    throw error;
+  }
+};
+
+export const deleteFile = async (path: string) => {
+  try {
+    checkAuth();
+    
+    // Delete from storage
+    const storageRef = ref(storage, path);
+    await deleteObject(storageRef);
+    
+    // Find and delete from Firestore
+    const q = query(collection(db, "documents"), where("path", "==", path));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const docId = querySnapshot.docs[0].id;
+      await deleteDocument('documents', docId);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting file:', error);
     throw error;
   }
 };

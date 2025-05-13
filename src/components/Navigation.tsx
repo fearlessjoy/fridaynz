@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Home, Mail, LogOut, User, AlertCircle, Menu } from "lucide-react";
+import { Home, Mail, LogOut, User, AlertCircle, Menu, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { NotificationsMenu } from "./NotificationsMenu";
 import { useSidebar } from "@/components/ui/sidebar-nav";
@@ -80,6 +80,14 @@ export function Navigation() {
           >
             <Mail className="mr-2 h-4 w-4" />
             Messages
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => navigate('/documents')}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Documents
           </Button>
         </div>
       </div>

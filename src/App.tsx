@@ -11,6 +11,7 @@ import Messaging from "./pages/Messaging";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import TaskView from "./pages/TaskView";
+import Documents from "./pages/Documents";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,11 @@ const App = () => (
               <Route path="/tasks/:taskId" element={
                 <ProtectedRoute>
                   <TaskView />
+                </ProtectedRoute>
+              } />
+              <Route path="/documents" element={
+                <ProtectedRoute>
+                  <Documents />
                 </ProtectedRoute>
               } />
               
