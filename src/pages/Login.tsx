@@ -74,10 +74,10 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Login to FridayNZ.com</CardTitle>
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Login to Kings Park Restaurant</CardTitle>
           <CardDescription>
-            Project management and team collaboration platform
+            Enter your email and password to login
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

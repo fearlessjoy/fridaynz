@@ -54,7 +54,7 @@ export function Navigation() {
   return (
     <div className="space-y-4 py-4">
       <div className="flex items-center justify-between px-3 py-2">
-        <h2 className="text-lg font-semibold">FridayNZ.com</h2>
+        <h2 className="text-lg font-semibold">Kings Park Restaurant</h2>
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
           <Menu className="h-4 w-4" />
         </Button>

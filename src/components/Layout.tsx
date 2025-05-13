@@ -36,7 +36,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader>
           <SidebarTrigger />
-          <h2 className="ml-2 text-lg font-semibold">Fridaynz.com</h2>
+          <h2 className="ml-2 text-lg font-semibold">Kings Park Restaurant</h2>
         </SidebarHeader>
         <SidebarContent>
           <Navigation />
@@ -45,7 +45,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between px-2">
               <div className="text-xs text-muted-foreground">
-                © {new Date().getFullYear()} Fridaynz.com
+                © {new Date().getFullYear()} Kings Park Restaurant
               </div>
               <RefreshButton />
             </div>

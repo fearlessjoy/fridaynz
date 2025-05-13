@@ -149,7 +149,7 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
     <div className="flex flex-col h-screen bg-background relative">
       {/* Mobile Header */}
       <div className="flex items-center justify-center px-3 py-2 border-b sticky top-0 bg-background z-10">
-        <h2 className="text-lg font-semibold">Kiwi Eatery</h2>
+        <h2 className="text-lg font-semibold">Kings Park Restaurant</h2>
       </div>
 
       {/* Main content area - adjust height to account for header and bottom nav */}
