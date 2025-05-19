@@ -140,6 +140,20 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     }
   };
 
+  const handleReassignTask = (newAssigneeId: string) => {
+    if (localTask && onTaskUpdate) {
+      const assignee = teamMembers.find(member => member.id === newAssigneeId);
+      const updatedTask = {
+        ...localTask,
+        assignee: newAssigneeId,
+        assignedTo: newAssigneeId,
+        updatedAt: new Date().toISOString()
+      };
+      setLocalTask(updatedTask);
+      onTaskUpdate(updatedTask);
+    }
+  };
+
   const handleTaskUpdate = (updatedTask: Task) => {
     console.log('Task update received:', 
       updatedTask.subtasks?.length || 0, 'subtasks');
@@ -341,16 +355,51 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                       <User className="h-4 w-4 shrink-0" />
                       <div className="min-w-0 overflow-hidden">
                         <h4 className="text-sm font-medium">Assigned To</h4>
-                        {assignee ? (
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <Avatar className="h-6 w-6 shrink-0">
-                              <AvatarImage src={assignee.avatar || `https://ui-avatars.com/api/?name=${assignee.name || 'U'}`} />
-                              <AvatarFallback>{getAvatarFallback(assignee.name)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm text-muted-foreground truncate">{assignee.name || 'Unknown User'}</span>
+                        {/* Add reassign dropdown if user has permission */}
+                        {(userRole === 'admin' || userRole === 'manager' || currentUserId === task.ownerId) ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Select 
+                              defaultValue={localTask?.assignedTo} 
+                              onValueChange={handleReassignTask}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue>
+                                  {assignee ? (
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-5 w-5 shrink-0">
+                                        <AvatarImage src={assignee.avatar || `https://ui-avatars.com/api/?name=${assignee.name || 'U'}`} />
+                                        <AvatarFallback>{getAvatarFallback(assignee.name)}</AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-sm truncate">{assignee.name || 'Unknown User'}</span>
+                                    </div>
+                                  ) : (
+                                    'Select user'
+                                  )}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teamMembers.map(member => (
+                                  <SelectItem key={member.id} value={member.id}>
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-5 w-5 shrink-0">
+                                        <AvatarImage src={member.avatar || `https://ui-avatars.com/api/?name=${member.name || 'U'}`} />
+                                        <AvatarFallback>{getAvatarFallback(member.name)}</AvatarFallback>
+                                      </Avatar>
+                                      <span>{member.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground">Unassigned</p>
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={assignee?.avatar || `https://ui-avatars.com/api/?name=${assignee?.name || 'U'}`} />
+                              <AvatarFallback>{getAvatarFallback(assignee?.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-muted-foreground truncate">{assignee?.name || 'Unknown User'}</span>
+                          </div>
                         )}
                       </div>
                     </div>

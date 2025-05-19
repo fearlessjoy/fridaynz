@@ -31,12 +31,12 @@ type TaskBoardProps = {
   currentUserId?: string;
 };
 
-const statuses: TaskStatus[] = ["Todo", "In Progress", "Under Review", "Completed"];
+const statuses: TaskStatus[] = ["Todo", "Started", "In Progress", "Completed"];
 
 const statusColors: Record<TaskStatus, string> = {
   "Todo": "bg-slate-100/70 dark:bg-slate-800/50",
+  "Started": "bg-amber-100/70 dark:bg-amber-900/20",
   "In Progress": "bg-ocean-100/70 dark:bg-ocean-900/20",
-  "Under Review": "bg-amber-100/70 dark:bg-amber-900/20",
   "Completed": "bg-kiwi-100/70 dark:bg-kiwi-900/20",
 };
 
@@ -68,10 +68,10 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
             case "Todo":
               expectedProgress = 0;
               break;
-            case "In Progress":
+            case "Started":
               expectedProgress = 33;
               break;
-            case "Under Review":
+            case "In Progress":
               expectedProgress = 66;
               break;
             case "Completed":
@@ -418,10 +418,10 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
         case "Todo":
           newProgress = 0;
           break;
-        case "In Progress":
+        case "Started":
           newProgress = 33;
           break;
-        case "Under Review":
+        case "In Progress":
           newProgress = 66;
           break;
         case "Completed":
@@ -753,7 +753,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
   const renderTaskList = (status: TaskStatus) => {
     const filteredTasks = getFilteredTasks(status);
     return (
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         {filteredTasks.map((task) => (
           <TaskCard
             key={`task-${task.id}-${task.comments?.length || 0}`}
@@ -771,7 +771,7 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
           />
         ))}
         {filteredTasks.length === 0 && (
-          <div className="h-[280px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+          <div className="h-[160px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
             <p className="text-sm">No tasks</p>
           </div>
         )}
@@ -819,54 +819,37 @@ const TaskBoard = ({ tasks, teamMembers, onTaskUpdate, userRole, currentUserId }
   // Desktop view - the original TaskBoard rendering
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100vh-12rem)] overflow-auto md:overflow-hidden">
-        {/* Todo Column */}
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
-          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
-            <h3 className="font-semibold text-lg tracking-tight">
-              Todo ({getFilteredTasks("Todo").length})
-            </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
-            {renderTaskList("Todo")}
-          </div>
-        </div>
-        
-        {/* In Progress Column */}
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
-          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
-            <h3 className="font-semibold text-lg tracking-tight">
-              In Progress ({getFilteredTasks("In Progress").length})
-            </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
-            {renderTaskList("In Progress")}
-          </div>
-        </div>
-        
-        {/* Under Review Column */}
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
-          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
-            <h3 className="font-semibold text-lg tracking-tight">
-              Under Review ({getFilteredTasks("Under Review").length})
-            </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
-            {renderTaskList("Under Review")}
-          </div>
-        </div>
-        
-        {/* Completed Column */}
-        <div className="flex flex-col bg-muted/30 rounded-lg p-3 h-auto md:h-full max-h-[calc(100vh-13rem)]">
-          <div className="flex items-center justify-between mb-3 sticky top-0 bg-muted/30 pt-1 z-10">
-            <h3 className="font-semibold text-lg tracking-tight">
-              Completed ({getFilteredTasks("Completed").length})
-            </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-3">
-            {renderTaskList("Completed")}
-          </div>
-        </div>
+      <div className="flex justify-end mb-2">
+        {(userRole === 'admin' || userRole === 'manager') && (
+          <TaskCreation 
+            teamMembers={teamMembers}
+            onCreateTask={onTaskUpdate}
+            userRole={userRole as 'admin' | 'manager' | 'staff'}
+          />
+        )}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 h-[calc(100vh-11rem)] overflow-auto md:overflow-hidden">
+        {statuses.map((status) => (
+          <Card key={status} className={`${statusColors[status]} shadow-sm`}>
+            <CardHeader className="p-2 pb-1">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-medium flex items-center gap-2">
+                  {status}
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {getFilteredTasks(status).length}
+                  </Badge>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-1.5">
+              <ScrollArea className="h-[calc(100vh-14rem)] pr-1">
+                <div className="space-y-1.5">
+                  {renderTaskList(status)}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Task Detail Dialog */}

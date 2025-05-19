@@ -77,6 +77,11 @@ const TaskCreation: React.FC<TaskCreationProps> = ({ teamMembers, onCreateTask, 
 
       await addDoc(collection(db, 'tasks'), task);
 
+      // Call the onCreateTask callback if provided
+      if (onCreateTask) {
+        onCreateTask(task);
+      }
+      
       setNewTask({
         title: "",
         description: "",

@@ -68,21 +68,21 @@ const priorityColors = {
 
 const statusColors: Record<TaskStatus, string> = {
   "Todo": "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200",
+  "Started": "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200",
   "In Progress": "bg-blue-100 hover:bg-blue-200 text-blue-700 border-blue-200",
-  "Under Review": "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200",
   "Completed": "bg-green-100 hover:bg-green-200 text-green-700 border-green-200"
 };
 
 const statusIcons: Record<TaskStatus, React.ReactNode> = {
   "Todo": <ArrowRight className="h-3 w-3 text-slate-400" />,
+  "Started": <ArrowRight className="h-3 w-3 text-amber-400" />,
   "In Progress": <ArrowRight className="h-3 w-3 text-blue-400" />,
-  "Under Review": <ArrowRight className="h-3 w-3 text-amber-400" />, 
   "Completed": <Check className="h-3 w-3 text-green-400" />
 };
 
 // Get next status based on current status
 const getNextStatus = (currentStatus: TaskStatus): TaskStatus => {
-  const statusOrder: TaskStatus[] = ["Todo", "In Progress", "Under Review", "Completed"];
+  const statusOrder: TaskStatus[] = ["Todo", "Started", "In Progress", "Completed"];
   const currentIndex = statusOrder.indexOf(currentStatus);
   return currentIndex < statusOrder.length - 1 ? statusOrder[currentIndex + 1] : currentStatus;
 };
@@ -196,11 +196,11 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
               <TabsTrigger value="Todo" className="text-[9px] px-0.5 h-6">
                 Todo <span className="opacity-70">({getTaskStatusCount("Todo")})</span>
               </TabsTrigger>
+              <TabsTrigger value="Started" className="text-[9px] px-0.5 h-6">
+                Started <span className="opacity-70">({getTaskStatusCount("Started")})</span>
+              </TabsTrigger>
               <TabsTrigger value="In Progress" className="text-[9px] px-0.5 h-6">
                 In Prog <span className="opacity-70">({getTaskStatusCount("In Progress")})</span>
-              </TabsTrigger>
-              <TabsTrigger value="Under Review" className="text-[9px] px-0.5 h-6">
-                Review <span className="opacity-70">({getTaskStatusCount("Under Review")})</span>
               </TabsTrigger>
               <TabsTrigger value="Completed" className="text-[9px] px-0.5 h-6">
                 Done <span className="opacity-70">({getTaskStatusCount("Completed")})</span>
@@ -324,7 +324,7 @@ const MobileTaskView: React.FC<MobileTaskViewProps> = ({
                               </Tooltip>
                             </TooltipProvider>
                             <DropdownMenuContent align="end" className="w-28 p-1">
-                              {["Todo", "In Progress", "Under Review", "Completed"].map((status) => (
+                              {["Todo", "Started", "In Progress", "Completed"].map((status) => (
                                 <DropdownMenuRadioItem
                                   key={status}
                                   value={status}

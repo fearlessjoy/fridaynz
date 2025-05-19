@@ -22,8 +22,8 @@ export type TaskCategory =
 
 export type TaskStatus = 
   | "Todo" 
+  | "Started" 
   | "In Progress" 
-  | "Under Review" 
   | "Completed";
 
 export type TaskPriority = 
